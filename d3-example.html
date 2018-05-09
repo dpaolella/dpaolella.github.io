@@ -79,6 +79,14 @@
   		color: black;
 	  }
 
+	  #footnote {
+		font-size: 10px;
+	  }
+	  
+	  sup {
+	  	font-size: 10px;
+	  }
+
     </style>
   </head>
   <body>
@@ -89,13 +97,16 @@
     
     <h1>An example interactive plot made using <a href="https://github.com/d3/d3">d3</a></h1>
     
-    <p>This data visualization shows total CO2 emissions and CO2 emissions per capita for 
-    each country in the world. Each polygon represents a different country nested within 
-    continent groupings. The size of a given polygon is proportional to the country's 
+    <p>**This plot is currently a work in progress.**</p>
+    <p>This weighted voronoi treemap<sup>[1]</sup> shows total CO2 emissions and CO2 
+    emissions per capita by country in 2014.<sup>[2]</sup> Each polygon represents a different country 
+    nested within continent groupings. The size of a given polygon is proportional to the country's 
     total CO2 emissions, and the color represents per capita CO2 emissions. Hover over a 
     polygon to see the country's name and per capita CO2 emissions value.</p>
-    <p>Code is based off of work by <a href="https://bl.ocks.org/Kcnarf">Kcnarf</a></p>
-    <p>Disclaimer: This plot is currently a work in progress.</p>
+    <p id="footnote">[1] Code is based off of work by <a href="https://bl.ocks.org/Kcnarf">Kcnarf</a></p>
+    <p id="footnote">[2] Data from <a href="https://data.worldbank.org">The World Bank</a></p>
+
+	<hr>
 
     <svg></svg>
 
