@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>d3-voronoi-treemap usage</title>
+    <meta name="description" content="An example interactive plot made using d3">
+    <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script src="https://raw.githack.com/Kcnarf/d3-weighted-voronoi/master/build/d3-weighted-voronoi.js"></script>
+    <script src="https://raw.githack.com/Kcnarf/d3-voronoi-map/master/build/d3-voronoi-map.js"></script>
+    <script src="https://raw.githack.com/Kcnarf/d3-voronoi-treemap/master/build/d3-voronoi-treemap.js"></script>
+    <style>
+      svg {
+        background-color: white;
+      }
+
+      #title {
+        letter-spacing: 2px;
+        font-weight: 500;
+        font-size: large;
+        font-family: Sans-Serif;
+      }
+
+	  text {
+	  	font-family: Sans-Serif;
+	  }
+
+      text.tiny {
+        font-size: 10pt;
+      }
+      
+      text.light {
+        fill: lightgrey
+      }
+
+      .world {
+        stroke: white;
+		    stroke-width: 4px;
+      }
+
+      .cell {
+        stroke: white;
+        stroke-width: 1px;
+      }
+      
+      .hoverer {
+        fill: transparent;
+        stroke: white;
+        stroke-width:0px;
+      }
+
+      .hoverer:hover {
+        stroke-width: 3px;
+      }
+
+      .legend-color {
+        stroke-width: 1px;
+        stroke:darkgrey;
+      }
+      
+      .topnav {
+  		overflow: hidden;
+  		background-color: #333;
+	  }
+	
+	  .topnav a {
+  		float: left;
+  		color: #f2f2f2;
+  		text-align: center;
+  		padding: 14px 16px;
+  		text-decoration: none;
+  		font-size: 17px;
+  		font-family: Arial, sans-serif;
+	  }
+
+	  .topnav a:hover {
+  		background-color: #ddd;
+  		color: black;
+	  }
+
+    </style>
+  </head>
+  <body>
+  	<div class="topnav">
+  		<a class="active" href="index.html">Altair</a>
+  		<a href="d3-example.html">D3</a>
+    </div>
+    
+    <h1>An example interactive plot made using <a href="https://github.com/d3/d3">d3</a></h1>
+    
+    <p>This data visualization shows total CO2 emissions and CO2 emissions per capita for 
+    each country in the world. Each polygon represents a different country nested within 
+    continent groupings. The size of a given polygon is proportional to the country's 
+    total CO2 emissions, and the color represents per capita CO2 emissions. Hover over a 
+    polygon to see the country's name and per capita CO2 emissions value.</p>
+    <p>Code is based off of work by <a href="https://bl.ocks.org/Kcnarf">Kcnarf</a></p>
+    <p>Disclaimer: This plot is currently a work in progress.</p>
+
+    <svg></svg>
+
+    <script>
+      //begin: constants
+      var _2PI = 2*Math.PI;
+      //end: constants
+
+      //begin: layout config.
+      var svgWidth = 960,
+          svgHeight = 600,
+          margin = {top: 10, right: 10, bottom: 10, left: 10},
+          height = svgHeight - margin.top - margin.bottom,
+          width = svgWidth - margin.left - margin.right,
+          halfWidth = width/2,
+          halfHeight = height/2,
+          quarterWidth = width/4,
+          quarterHeight = height/4,
+          titleY = 20,
+          legendsMinY = height - 20,
+          treemapRadius = 205,
+          treemapCenter = [halfWidth, halfHeight];
+      //end: layout config.
+
+      var _voronoiTreemap = d3.voronoiTreemap();
+      var hierarchy, circlingPolygon;
+      var fontScale = d3.scaleLinear();
+      var sequentialScale = d3.scaleSequential().domain([0, 1]).interpolator(d3.interpolateOrRd);
+      var svg, drawingArea, treemapContainer;
+      
+	  d3.json("co2.json", function(error, rootData) {
+        if (error) throw error;
+
+        initData();
+        initLayout(rootData);
+
+        hierarchy = d3.hierarchy(rootData).sum(function(d){ return d.co2; });
+        _voronoiTreemap
+          .clip(circlingPolygon)
+        	(hierarchy);
+
+        drawTreemap(hierarchy);
+	  });
+	  
+      function initData(rootData) {
+        circlingPolygon = computeCirclingPolygon(treemapRadius);
+        fontScale.domain([3, 20]).range([8, 20]).clamp(true);
+      }
+
+      function computeCirclingPolygon(radius) {
+        var points = 60,
+            increment = _2PI/points,
+            circlingPolygon = [];
+
+        for (var a=0, i=0; i<points; i++, a+=increment) {
+          circlingPolygon.push(
+            [radius + radius*Math.cos(a), radius + radius*Math.sin(a)]
+          )
+        }
+
+      	return circlingPolygon;
+      };
+
+      function initLayout(rootData) {
+        svg = d3.select("svg")
+          .attr("width", svgWidth)
+          .attr("height", svgHeight);
+
+        drawingArea = svg.append("g")
+        	.classed("drawingArea", true)
+        	.attr("transform", "translate("+[margin.left,margin.top]+")");
+
+        treemapContainer = drawingArea.append("g")
+        	.classed("treemap-container", true)
+        	.attr("transform", "translate("+treemapCenter+")");
+
+        treemapContainer.append("path")
+        	.classed("world", true)
+        	.attr("transform", "translate("+[-treemapRadius,-treemapRadius]+")")
+        	.attr("d", "M"+circlingPolygon.join(",")+"Z");
+
+        drawTitle();
+      }
+
+      function drawTitle() {
+        drawingArea.append("text")
+        	.attr("id", "title")
+        	.attr("transform", "translate("+[halfWidth, titleY]+")")
+        	.attr("text-anchor", "middle")
+          .text("Total CO2 Emissions vs. CO2 Emissions Per Capita")
+      }
+
+      function drawTreemap(hierarchy) {
+        var leaves=hierarchy.leaves();
+        var descendants=hierarchy.descendants().reverse();
+        
+        var cells = treemapContainer.append("g")
+        	.classed('cells', true)
+        	.attr("transform", "translate("+[-treemapRadius,-treemapRadius]+")")
+	        .selectAll(".cell")
+        	.data(descendants)
+        	.enter()
+        		.append("path")
+        			.classed("cell", true)
+        			.attr("d", function(d){ return "M"+d.polygon.join(",")+"z"; })
+        			.style("stroke-width", function(d){ 
+        				if (d.depth == 0) {
+        					return 4+"px";
+        				} else {
+        					return 4/(d.depth**2)+"px"; 
+        				}
+        			})
+        			.style("fill", function(d){
+        				if (d.data.co2perCap !== undefined) {
+							return sequentialScale(Math.log(d.data.co2perCap)/3.9);
+						} else {
+         					return "transparent";
+         				}
+          			})
+          			 
+        var hoverers = treemapContainer.append("g")
+        	.classed('hoverers', true)
+        	.attr("transform", "translate("+[-treemapRadius,-treemapRadius]+")")
+	        .selectAll(".hoverer")
+        	.data(leaves)
+        	.enter()
+        		.append("path")
+        			.classed("hoverer", true)
+        			.attr("d", function(d){ return "M"+d.polygon.join(",")+"z"; });
+
+        hoverers.append("title")
+          .text(function(d) {
+          		if (d.data.co2perCap !== undefined) {
+        			return d.data.name + "\n" + round(d.data.co2perCap,2);
+        		} else if (d.parent.data.co2perCap !== undefined) {
+        			return d.data.name + "\n" + round(d.parent.data.co2perCap,2);
+        		} else {
+        			return d.data.name + "\n" + round(d.parent.parent.data.co2perCap,2);
+        		} 
+          });
+      }
+      
+      function round(value, decimals) {
+  		return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
+	  }
+    </script>
+  </body>
+</html>
